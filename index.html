@@ -1,0 +1,1498 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>AMS — Asset Monitoring System</title>
+<style>
+  :root {
+    --green-1: #00b14f;
+    --green-2: #00913f;
+    --green-3: #007a34;
+    --green-4: #e6f9ee;
+    --green-5: #d0f5e0;
+    --gold-1: #f5c842;
+    --gold-2: #e6b800;
+    --gold-3: #fff8e1;
+    --red: #e53935;
+    --red-light: #fdecea;
+    --bg: #f0f4f8;
+    --surface: #ffffff;
+    --surface2: #f7fafc;
+    --surface3: #eef2f7;
+    --glass: rgba(255,255,255,0.75);
+    --glass-border: rgba(255,255,255,0.5);
+    --text-1: #0d1b0f;
+    --text-2: #3d5142;
+    --text-3: #7a9982;
+    --border: #d8e8de;
+    --shadow-sm: 0 1px 4px rgba(0,0,0,0.07);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.10);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.13);
+    --navbar-h: 56px;
+    --ticker-h: 36px;
+    --bottom-h: 64px;
+    --radius: 16px;
+    --radius-sm: 10px;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  }
+  [data-theme="dark"] {
+    --bg: #0a120d;
+    --surface: #111d14;
+    --surface2: #162019;
+    --surface3: #1d2b20;
+    --glass: rgba(17,29,20,0.85);
+    --glass-border: rgba(255,255,255,0.08);
+    --text-1: #e8f5ec;
+    --text-2: #a8c8b0;
+    --text-3: #5a7a62;
+    --border: #1e3324;
+    --green-4: #0d2416;
+    --green-5: #112c1a;
+    --gold-3: #1a1500;
+    --red-light: #1a0505;
+    --shadow-sm: 0 1px 4px rgba(0,0,0,0.3);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.4);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.5);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { height:100%; overflow:hidden; font-family:var(--font); background:var(--bg); color:var(--text-1); }
+
+  /* PIN SCREEN */
+  #pin-screen {
+    position:fixed; inset:0; z-index:1000;
+    background:linear-gradient(160deg, #00b14f 0%, #007a34 50%, #003d1a 100%);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:32px;
+  }
+  #pin-screen .pin-logo {
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+  }
+  #pin-screen .pin-logo-icon {
+    width:72px; height:72px; background:rgba(255,255,255,0.15); border-radius:20px;
+    border:1.5px solid rgba(255,255,255,0.3); display:flex; align-items:center; justify-content:center;
+    backdrop-filter:blur(10px);
+  }
+  #pin-screen .pin-logo-title { color:#fff; font-size:22px; font-weight:700; letter-spacing:-0.5px; }
+  #pin-screen .pin-logo-sub { color:rgba(255,255,255,0.6); font-size:13px; }
+  #pin-screen .pin-card {
+    background:rgba(255,255,255,0.12); border:1.5px solid rgba(255,255,255,0.2);
+    border-radius:24px; padding:28px 32px; width:calc(100% - 48px); max-width:320px;
+    backdrop-filter:blur(20px);
+  }
+  #pin-screen .pin-title { color:#fff; font-size:16px; font-weight:600; text-align:center; margin-bottom:20px; }
+  #pin-screen .pin-dots { display:flex; gap:14px; justify-content:center; margin-bottom:24px; }
+  #pin-screen .pin-dot {
+    width:14px; height:14px; border-radius:50%;
+    border:2px solid rgba(255,255,255,0.5); background:transparent; transition:all 0.2s;
+  }
+  #pin-screen .pin-dot.filled { background:#fff; border-color:#fff; }
+  #pin-screen .pin-error { color:#ffcdd2; font-size:13px; text-align:center; min-height:18px; margin-bottom:8px; }
+  #pin-screen .pin-keypad { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  #pin-screen .pin-key {
+    background:rgba(255,255,255,0.12); border:1.5px solid rgba(255,255,255,0.15);
+    border-radius:14px; height:56px; color:#fff; font-size:20px; font-weight:600;
+    cursor:pointer; transition:all 0.15s; display:flex; align-items:center; justify-content:center;
+  }
+  #pin-screen .pin-key:active { background:rgba(255,255,255,0.25); transform:scale(0.95); }
+  #pin-screen .pin-key.del { font-size:14px; }
+  #pin-screen .pin-key.empty { background:transparent; border-color:transparent; cursor:default; }
+
+  /* APP SHELL */
+  #app { display:none; flex-direction:column; height:100%; }
+  #app.visible { display:flex; }
+
+  /* TOP NAVBAR */
+  #top-nav {
+    height:var(--navbar-h); background:var(--green-1);
+    display:flex; align-items:center; padding:0 16px; gap:10px;
+    flex-shrink:0; position:relative; z-index:100;
+    box-shadow:0 2px 8px rgba(0,177,79,0.3);
+  }
+  #top-nav .nav-logo {
+    width:34px; height:34px; background:rgba(255,255,255,0.2); border-radius:10px;
+    border:1.5px solid rgba(255,255,255,0.3); display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+  }
+  #top-nav .nav-title { color:#fff; font-size:14px; font-weight:700; flex:1; letter-spacing:-0.3px; line-height:1.2; }
+  #top-nav .nav-title span { display:block; font-size:10px; font-weight:400; opacity:0.75; }
+  #top-nav .nav-btn {
+    width:36px; height:36px; background:rgba(255,255,255,0.15); border-radius:10px;
+    border:1.5px solid rgba(255,255,255,0.2); display:flex; align-items:center; justify-content:center;
+    cursor:pointer; transition:all 0.2s; flex-shrink:0;
+  }
+  #top-nav .nav-btn:active { background:rgba(255,255,255,0.3); }
+
+  /* TICKER */
+  #ticker {
+    height:var(--ticker-h); background:var(--green-2);
+    display:flex; align-items:center; overflow:hidden; flex-shrink:0;
+    border-bottom:1px solid rgba(0,0,0,0.1);
+  }
+  #ticker-track {
+    display:flex; align-items:center; gap:0;
+    animation:ticker-scroll 28s linear infinite; white-space:nowrap;
+  }
+  #ticker-track .tick-item {
+    display:inline-flex; align-items:center; gap:6px;
+    color:rgba(255,255,255,0.95); font-size:12px; padding:0 20px;
+  }
+  #ticker-track .tick-item .tick-label { color:rgba(255,255,255,0.6); }
+  #ticker-track .tick-item .tick-val { font-weight:600; }
+  #ticker-track .tick-dot { color:rgba(255,255,255,0.3); }
+  @keyframes ticker-scroll {
+    0% { transform:translateX(0); }
+    100% { transform:translateX(-50%); }
+  }
+
+  /* CONTENT AREA */
+  #content {
+    flex:1; overflow:hidden; position:relative;
+  }
+  .page {
+    position:absolute; inset:0; overflow-y:auto; overflow-x:hidden;
+    padding:16px 16px calc(16px + var(--bottom-h)); display:none;
+    -webkit-overflow-scrolling:touch;
+  }
+  .page.active { display:block; }
+
+  /* BOTTOM NAV */
+  #bottom-nav {
+    height:var(--bottom-h); background:var(--surface);
+    border-top:1px solid var(--border); display:flex;
+    flex-shrink:0; position:relative; z-index:100;
+    box-shadow:0 -2px 12px rgba(0,0,0,0.06);
+  }
+  .bnav-item {
+    flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:4px; cursor:pointer; transition:all 0.2s; padding-bottom:4px;
+    color:var(--text-3); position:relative;
+  }
+  .bnav-item.active { color:var(--green-1); }
+  .bnav-item .bnav-label { font-size:10px; font-weight:500; }
+  .bnav-item.active::after {
+    content:''; position:absolute; top:0; left:50%; transform:translateX(-50%);
+    width:32px; height:3px; background:var(--green-1); border-radius:0 0 4px 4px;
+  }
+
+  /* CARDS */
+  .card {
+    background:var(--surface); border-radius:var(--radius); padding:16px;
+    box-shadow:var(--shadow-sm); border:1px solid var(--border); margin-bottom:12px;
+  }
+  .card-glass {
+    background:var(--glass); border:1.5px solid var(--glass-border);
+    backdrop-filter:blur(12px); border-radius:var(--radius); padding:16px;
+    box-shadow:var(--shadow-md); margin-bottom:12px;
+  }
+  .card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .card-title { font-size:13px; font-weight:600; color:var(--text-2); display:flex; align-items:center; gap:6px; }
+  .card-value { font-size:22px; font-weight:700; color:var(--text-1); letter-spacing:-0.5px; }
+  .card-sub { font-size:12px; color:var(--text-3); margin-top:2px; }
+
+  /* BADGE */
+  .badge { display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:20px; font-size:11px; font-weight:600; }
+  .badge-green { background:var(--green-4); color:var(--green-2); }
+  .badge-red { background:var(--red-light); color:var(--red); }
+  .badge-gold { background:var(--gold-3); color:#9a7a00; }
+  .badge-gray { background:var(--surface3); color:var(--text-3); }
+
+  /* PLATFORM CARDS */
+  .platform-card {
+    border-radius:var(--radius); padding:16px; margin-bottom:12px;
+    position:relative; overflow:hidden;
+  }
+  .platform-card-bsi {
+    background:linear-gradient(135deg, #00b14f 0%, #007a34 100%);
+    box-shadow:0 4px 20px rgba(0,177,79,0.3);
+  }
+  .platform-card-treasury {
+    background:linear-gradient(135deg, #f5c842 0%, #c8960a 100%);
+    box-shadow:0 4px 20px rgba(245,200,66,0.3);
+  }
+  .platform-card .pc-name { font-size:13px; font-weight:700; color:rgba(255,255,255,0.9); margin-bottom:4px; display:flex; align-items:center; gap:6px; }
+  .platform-card .pc-value { font-size:24px; font-weight:800; color:#fff; letter-spacing:-0.5px; }
+  .platform-card .pc-gram { font-size:12px; color:rgba(255,255,255,0.7); margin-top:2px; }
+  .platform-card .pc-pnl { margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.2); display:flex; justify-content:space-between; align-items:center; }
+  .platform-card .pc-pnl-label { font-size:11px; color:rgba(255,255,255,0.7); }
+  .platform-card .pc-pnl-val { font-size:13px; font-weight:700; color:#fff; }
+  .platform-card .pc-best-badge {
+    position:absolute; top:12px; right:12px;
+    background:rgba(255,255,255,0.25); border:1px solid rgba(255,255,255,0.4);
+    border-radius:20px; padding:3px 8px; font-size:10px; font-weight:700; color:#fff;
+  }
+  .platform-card .pc-toggle {
+    position:absolute; bottom:12px; right:12px;
+    width:28px; height:28px; background:rgba(255,255,255,0.2); border-radius:8px;
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+  }
+  .platform-card.hidden-asset { opacity:0.4; }
+
+  /* TOTAL CARD */
+  .total-card {
+    background:var(--surface2); border:1.5px solid var(--border);
+    border-radius:var(--radius); padding:16px; margin-bottom:12px;
+  }
+  .total-row { display:flex; justify-content:space-between; align-items:center; padding:6px 0; }
+  .total-row:not(:last-child) { border-bottom:1px solid var(--border); }
+  .total-row .tr-label { font-size:12px; color:var(--text-2); }
+  .total-row .tr-val { font-size:13px; font-weight:600; color:var(--text-1); }
+
+  /* SKELETON */
+  .skeleton { background:var(--surface3); border-radius:8px; animation:skel-pulse 1.5s ease-in-out infinite; }
+  @keyframes skel-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* SECTION HEADER */
+  .section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; margin-top:4px; }
+  .section-title { font-size:13px; font-weight:700; color:var(--text-2); text-transform:uppercase; letter-spacing:0.5px; }
+
+  /* TABS */
+  .tabs { display:flex; background:var(--surface3); border-radius:12px; padding:3px; margin-bottom:16px; }
+  .tab { flex:1; text-align:center; padding:8px; border-radius:10px; font-size:13px; font-weight:600; color:var(--text-3); cursor:pointer; transition:all 0.2s; }
+  .tab.active { background:var(--surface); color:var(--green-1); box-shadow:var(--shadow-sm); }
+
+  /* FORMS */
+  .form-group { margin-bottom:14px; }
+  .form-label { font-size:12px; font-weight:600; color:var(--text-2); margin-bottom:6px; display:block; }
+  .form-input {
+    width:100%; padding:11px 14px; border-radius:var(--radius-sm);
+    border:1.5px solid var(--border); background:var(--surface);
+    font-size:14px; color:var(--text-1); font-family:var(--font);
+    transition:border-color 0.2s; outline:none;
+  }
+  .form-input:focus { border-color:var(--green-1); }
+  .form-input::placeholder { color:var(--text-3); }
+
+  /* BUTTONS */
+  .btn {
+    display:inline-flex; align-items:center; justify-content:center; gap:6px;
+    padding:11px 18px; border-radius:var(--radius-sm); font-size:13px; font-weight:600;
+    cursor:pointer; border:none; transition:all 0.2s; font-family:var(--font);
+  }
+  .btn:active { transform:scale(0.97); }
+  .btn-primary { background:var(--green-1); color:#fff; box-shadow:0 2px 8px rgba(0,177,79,0.3); }
+  .btn-primary:hover { background:var(--green-2); }
+  .btn-outline { background:transparent; color:var(--green-1); border:1.5px solid var(--green-1); }
+  .btn-danger { background:var(--red-light); color:var(--red); border:1.5px solid rgba(229,57,53,0.2); }
+  .btn-sm { padding:7px 12px; font-size:12px; border-radius:8px; }
+  .btn-block { width:100%; }
+  .btn-icon { width:34px; height:34px; padding:0; border-radius:10px; }
+
+  /* TABLE */
+  .table-wrap { overflow-x:auto; border-radius:var(--radius-sm); border:1px solid var(--border); }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  th { background:var(--surface2); color:var(--text-2); font-weight:600; padding:9px 10px; text-align:left; border-bottom:1px solid var(--border); }
+  td { padding:9px 10px; border-bottom:1px solid var(--border); color:var(--text-1); }
+  tr:last-child td { border-bottom:none; }
+  tr:hover td { background:var(--surface2); }
+
+  /* SETTINGS */
+  .setting-item {
+    background:var(--surface); border-radius:var(--radius-sm); padding:14px 16px;
+    display:flex; align-items:center; gap:12px; margin-bottom:8px;
+    border:1px solid var(--border); cursor:pointer; transition:all 0.2s;
+  }
+  .setting-item:active { background:var(--surface2); }
+  .setting-item .si-icon { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .setting-item .si-text { flex:1; }
+  .setting-item .si-title { font-size:13px; font-weight:600; color:var(--text-1); }
+  .setting-item .si-sub { font-size:11px; color:var(--text-3); margin-top:1px; }
+
+  /* MODAL */
+  .modal-overlay {
+    position:fixed; inset:0; z-index:500; background:rgba(0,0,0,0.5);
+    display:none; align-items:flex-end; justify-content:center;
+    backdrop-filter:blur(4px);
+  }
+  .modal-overlay.open { display:flex; }
+  .modal-sheet {
+    background:var(--surface); border-radius:24px 24px 0 0; padding:24px 20px 32px;
+    width:100%; max-width:480px; max-height:90vh; overflow-y:auto;
+    animation:slide-up 0.3s ease;
+  }
+  @keyframes slide-up { from{transform:translateY(100%)} to{transform:translateY(0)} }
+  .modal-handle { width:36px; height:4px; background:var(--border); border-radius:2px; margin:0 auto 20px; }
+  .modal-title { font-size:16px; font-weight:700; color:var(--text-1); margin-bottom:16px; }
+
+  /* TOAST */
+  #toast {
+    position:fixed; bottom:calc(var(--bottom-h) + 16px); left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--text-1); color:var(--surface); padding:10px 20px; border-radius:12px;
+    font-size:13px; font-weight:500; z-index:900; opacity:0; transition:all 0.3s;
+    white-space:nowrap; pointer-events:none; box-shadow:var(--shadow-lg);
+  }
+  #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* CONFIRM DIALOG */
+  .confirm-overlay {
+    position:fixed; inset:0; z-index:600; background:rgba(0,0,0,0.5);
+    display:none; align-items:center; justify-content:center; padding:24px;
+    backdrop-filter:blur(4px);
+  }
+  .confirm-overlay.open { display:flex; }
+  .confirm-box {
+    background:var(--surface); border-radius:20px; padding:24px 20px; width:100%; max-width:320px;
+    animation:fade-in 0.2s ease;
+  }
+  @keyframes fade-in { from{opacity:0;transform:scale(0.95)} to{opacity:1;transform:scale(1)} }
+  .confirm-title { font-size:15px; font-weight:700; color:var(--text-1); margin-bottom:8px; }
+  .confirm-msg { font-size:13px; color:var(--text-2); margin-bottom:20px; line-height:1.5; }
+  .confirm-actions { display:flex; gap:10px; }
+  .confirm-actions .btn { flex:1; }
+
+  /* REFRESH BTN */
+  .refresh-btn {
+    width:32px; height:32px; background:var(--surface); border:1.5px solid var(--border);
+    border-radius:10px; display:flex; align-items:center; justify-content:center;
+    cursor:pointer; transition:all 0.2s; color:var(--text-2);
+  }
+  .refresh-btn:active { transform:rotate(180deg); background:var(--green-4); }
+
+  /* MISC */
+  .divider { height:1px; background:var(--border); margin:12px 0; }
+  .text-green { color:var(--green-1); }
+  .text-red { color:var(--red); }
+  .text-gold { color:#c8960a; }
+  .text-muted { color:var(--text-3); }
+  .flex-row { display:flex; align-items:center; gap:8px; }
+  .flex-between { display:flex; align-items:center; justify-content:space-between; }
+  .mt-4 { margin-top:4px; }
+  .mt-8 { margin-top:8px; }
+  .mb-4 { margin-bottom:4px; }
+  .w-full { width:100%; }
+  .empty-state { text-align:center; padding:32px 16px; color:var(--text-3); font-size:13px; }
+  .empty-state svg { margin-bottom:12px; opacity:0.4; }
+
+  /* COPYRIGHT */
+  .copyright { text-align:center; font-size:10px; color:var(--text-3); padding:12px 0 4px; }
+
+  /* PAGE HEADER */
+  .page-header { margin-bottom:16px; }
+  .page-header h2 { font-size:18px; font-weight:800; color:var(--text-1); letter-spacing:-0.5px; }
+  .page-header p { font-size:12px; color:var(--text-3); margin-top:2px; }
+
+  /* PRICE INPUT CARD */
+  .price-entry-card {
+    background:linear-gradient(135deg, var(--green-4) 0%, var(--surface) 100%);
+    border:1.5px solid var(--green-5); border-radius:var(--radius); padding:16px; margin-bottom:12px;
+  }
+  [data-theme="dark"] .price-entry-card {
+    background:linear-gradient(135deg, var(--green-4) 0%, var(--surface) 100%);
+  }
+
+  /* STAT ROW */
+  .stat-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+  .stat-item { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px; }
+  .stat-item .s-label { font-size:11px; color:var(--text-3); margin-bottom:4px; }
+  .stat-item .s-val { font-size:14px; font-weight:700; color:var(--text-1); }
+
+  /* HISTORY LIST */
+  .history-item {
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm);
+    padding:12px 14px; margin-bottom:8px; display:flex; align-items:center; gap:12px;
+  }
+  .history-item .hi-icon { width:36px; height:36px; border-radius:10px; background:var(--green-4); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .history-item .hi-body { flex:1; min-width:0; }
+  .history-item .hi-title { font-size:13px; font-weight:600; color:var(--text-1); }
+  .history-item .hi-sub { font-size:11px; color:var(--text-3); margin-top:2px; }
+  .history-item .hi-right { text-align:right; flex-shrink:0; }
+  .history-item .hi-val { font-size:13px; font-weight:700; color:var(--text-1); }
+  .history-item .hi-gram { font-size:11px; color:var(--text-3); margin-top:2px; }
+</style>
+</head>
+<body>
+
+<!-- PIN SCREEN -->
+<div id="pin-screen">
+  <div class="pin-logo">
+    <div class="pin-logo-icon">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/>
+      </svg>
+    </div>
+    <div class="pin-logo-title">AMS</div>
+    <div class="pin-logo-sub">Asset Monitoring System</div>
+  </div>
+  <div class="pin-card">
+    <div class="pin-title" id="pin-title">Masukkan PIN</div>
+    <div class="pin-dots" id="pin-dots">
+      <div class="pin-dot" id="d0"></div>
+      <div class="pin-dot" id="d1"></div>
+      <div class="pin-dot" id="d2"></div>
+      <div class="pin-dot" id="d3"></div>
+      <div class="pin-dot" id="d4"></div>
+      <div class="pin-dot" id="d5"></div>
+    </div>
+    <div class="pin-error" id="pin-error"></div>
+    <div class="pin-keypad">
+      <div class="pin-key" onclick="pinKey('1')">1</div>
+      <div class="pin-key" onclick="pinKey('2')">2</div>
+      <div class="pin-key" onclick="pinKey('3')">3</div>
+      <div class="pin-key" onclick="pinKey('4')">4</div>
+      <div class="pin-key" onclick="pinKey('5')">5</div>
+      <div class="pin-key" onclick="pinKey('6')">6</div>
+      <div class="pin-key" onclick="pinKey('7')">7</div>
+      <div class="pin-key" onclick="pinKey('8')">8</div>
+      <div class="pin-key" onclick="pinKey('9')">9</div>
+      <div class="pin-key empty"></div>
+      <div class="pin-key" onclick="pinKey('0')">0</div>
+      <div class="pin-key del" onclick="pinDel()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/><line x1="18" y1="9" x2="12" y2="15"/><line x1="12" y1="9" x2="18" y2="15"/></svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <!-- TOP NAV -->
+  <nav id="top-nav">
+    <div class="nav-logo">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/>
+      </svg>
+    </div>
+    <div class="nav-title">AMS <span>Asset Monitoring System</span></div>
+    <div class="nav-btn" onclick="toggleTheme()" title="Toggle tema">
+      <svg id="theme-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+      </svg>
+    </div>
+    <div class="nav-btn" onclick="logout()" title="Keluar">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+    </div>
+  </nav>
+
+  <!-- TICKER -->
+  <div id="ticker">
+    <div id="ticker-track"></div>
+  </div>
+
+  <!-- CONTENT -->
+  <div id="content">
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <div class="flex-between">
+          <div>
+            <h2>Dashboard</h2>
+            <p id="dash-date">Hari ini</p>
+          </div>
+          <div class="refresh-btn" onclick="refreshDashboard()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Skeleton -->
+      <div id="dash-skeleton">
+        <div class="skeleton" style="height:120px;border-radius:16px;margin-bottom:12px"></div>
+        <div class="skeleton" style="height:120px;border-radius:16px;margin-bottom:12px"></div>
+        <div class="skeleton" style="height:100px;border-radius:16px;margin-bottom:12px"></div>
+      </div>
+
+      <!-- Real content -->
+      <div id="dash-content" style="display:none">
+        <div id="bsi-dash-card"></div>
+        <div id="treasury-dash-card"></div>
+        <div class="section-header">
+          <div class="section-title">Ringkasan Total</div>
+        </div>
+        <div class="total-card" id="total-summary"></div>
+      </div>
+
+      <div class="copyright">© Gentara Anugrah · All Rights Reserved · 2026</div>
+    </div>
+
+    <!-- ASET -->
+    <div class="page" id="page-aset">
+      <div class="page-header">
+        <h2>Aset Emas</h2>
+        <p>Riwayat pembelian & detail</p>
+      </div>
+      <div class="tabs">
+        <div class="tab active" id="tab-bsi" onclick="switchAssetTab('bsi')">
+          <span style="display:flex;align-items:center;justify-content:center;gap:5px">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>
+            BSI
+          </span>
+        </div>
+        <div class="tab" id="tab-treasury" onclick="switchAssetTab('treasury')">
+          <span style="display:flex;align-items:center;justify-content:center;gap:5px">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="22" x2="21" y2="22"/><rect x="5" y="11" width="4" height="11"/><rect x="10" y="7" width="4" height="15"/><rect x="15" y="4" width="4" height="18"/></svg>
+            Treasury
+          </span>
+        </div>
+      </div>
+      <div id="aset-content"></div>
+      <div class="copyright">© Gentara Anugrah · All Rights Reserved · 2026</div>
+    </div>
+
+    <!-- HARGA -->
+    <div class="page" id="page-harga">
+      <div class="page-header">
+        <h2>Harga Emas</h2>
+        <p>Input & riwayat harga harian</p>
+      </div>
+      <div class="price-entry-card">
+        <div class="section-title" style="margin-bottom:14px">Input Harga Hari Ini</div>
+        <div class="form-group">
+          <label class="form-label">
+            <span style="display:flex;align-items:center;gap:5px">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--green-1)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>
+              Harga BSI (Rp/gram)
+            </span>
+          </label>
+          <input class="form-input" type="text" id="input-bsi-price" placeholder="cth: 1.935.000" oninput="formatRupiahInput(this)">
+        </div>
+        <div class="form-group">
+          <label class="form-label">
+            <span style="display:flex;align-items:center;gap:5px">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#c8960a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="22" x2="21" y2="22"/><rect x="5" y="11" width="4" height="11"/><rect x="10" y="7" width="4" height="15"/><rect x="15" y="4" width="4" height="18"/></svg>
+              Harga Treasury (Rp/gram)
+            </span>
+          </label>
+          <input class="form-input" type="text" id="input-treasury-price" placeholder="cth: 1.928.000" oninput="formatRupiahInput(this)">
+        </div>
+        <button class="btn btn-primary btn-block" onclick="savePrice()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Simpan Harga
+        </button>
+      </div>
+
+      <div class="section-header">
+        <div class="section-title">Riwayat Harga</div>
+      </div>
+      <div id="price-history-table"></div>
+      <div class="copyright">© Gentara Anugrah · All Rights Reserved · 2026</div>
+    </div>
+
+    <!-- PENGATURAN -->
+    <div class="page" id="page-settings">
+      <div class="page-header">
+        <h2>Pengaturan</h2>
+        <p>Konfigurasi & data</p>
+      </div>
+
+      <div class="section-title" style="margin-bottom:10px">Modal Awal</div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="form-group">
+          <label class="form-label">Modal BSI (Rp)</label>
+          <input class="form-input" type="text" id="modal-bsi-input" placeholder="cth: 5.000.000" oninput="formatRupiahInput(this)">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Modal Treasury (Rp)</label>
+          <input class="form-input" type="text" id="modal-treasury-input" placeholder="cth: 5.000.000" oninput="formatRupiahInput(this)">
+        </div>
+        <div style="margin-top:14px">
+          <button class="btn btn-primary btn-block" onclick="saveModals()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Simpan Modal
+          </button>
+        </div>
+      </div>
+
+      <div class="section-title" style="margin-bottom:10px">Keamanan & Data</div>
+      <div class="setting-item" onclick="openChangePIN()">
+        <div class="si-icon" style="background:var(--green-4)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green-1)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <div class="si-text">
+          <div class="si-title">Ubah PIN</div>
+          <div class="si-sub">Ganti PIN keamanan aplikasi</div>
+        </div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+      <div class="setting-item" onclick="exportData()">
+        <div class="si-icon" style="background:var(--gold-3)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c8960a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        </div>
+        <div class="si-text">
+          <div class="si-title">Export JSON</div>
+          <div class="si-sub">Unduh backup data</div>
+        </div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+      <div class="setting-item" onclick="document.getElementById('import-file').click()">
+        <div class="si-icon" style="background:var(--surface3)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </div>
+        <div class="si-text">
+          <div class="si-title">Import JSON</div>
+          <div class="si-sub">Pulihkan data dari backup</div>
+        </div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+      <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+
+      <div class="section-title" style="margin-bottom:10px;margin-top:16px;color:var(--red)">Zona Berbahaya</div>
+      <div class="setting-item" style="border-color:rgba(229,57,53,0.25)" onclick="resetAllData()">
+        <div class="si-icon" style="background:var(--red-light)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        </div>
+        <div class="si-text">
+          <div class="si-title" style="color:var(--red)">Reset Semua Data</div>
+          <div class="si-sub">Hapus seluruh aset, riwayat & harga secara permanen</div>
+        </div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+
+      <div class="copyright" style="margin-top:16px">© Gentara Anugrah · All Rights Reserved · 2026</div>
+    </div>
+
+  </div><!-- /content -->
+
+  <!-- BOTTOM NAV -->
+  <nav id="bottom-nav">
+    <div class="bnav-item active" id="bn-dashboard" onclick="navigate('dashboard')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+      </svg>
+      <span class="bnav-label">Dashboard</span>
+    </div>
+    <div class="bnav-item" id="bn-aset" onclick="navigate('aset')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+      </svg>
+      <span class="bnav-label">Aset</span>
+    </div>
+    <div class="bnav-item" id="bn-harga" onclick="navigate('harga')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
+      </svg>
+      <span class="bnav-label">Harga</span>
+    </div>
+    <div class="bnav-item" id="bn-settings" onclick="navigate('settings')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+      <span class="bnav-label">Pengaturan</span>
+    </div>
+  </nav>
+</div>
+
+<!-- MODALS -->
+<!-- Add Purchase Modal -->
+<div class="modal-overlay" id="modal-purchase">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-purchase-title">Tambah Pembelian</div>
+
+    <!-- Mode toggle -->
+    <div class="tabs" style="margin-bottom:16px">
+      <div class="tab active" id="mode-tab-new" onclick="setPurchaseMode('new')">
+        <span style="display:flex;align-items:center;justify-content:center;gap:5px">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Pembelian Baru
+        </span>
+      </div>
+      <div class="tab" id="mode-tab-saldo" onclick="setPurchaseMode('saldo')">
+        <span style="display:flex;align-items:center;justify-content:center;gap:5px">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+          Saldo Awal
+        </span>
+      </div>
+    </div>
+
+    <!-- Info saldo awal -->
+    <div id="saldo-info" style="display:none;background:var(--gold-3);border:1px solid #e6d080;border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:#7a6000;line-height:1.5">
+      💡 Input total gram yang sudah dimiliki tanpa detail pembelian. Cocok untuk data awal atau migrasi.
+    </div>
+
+    <div class="form-group" id="field-date">
+      <label class="form-label" id="label-date">Tanggal Pembelian</label>
+      <input class="form-input" type="date" id="purchase-date">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Jumlah Gram</label>
+      <input class="form-input" type="text" id="purchase-gram" placeholder="cth: 2,5" inputmode="decimal" oninput="this.value=this.value.replace(/[^0-9,]/g,'')">
+    </div>
+    <div class="form-group" id="field-price">
+      <label class="form-label" id="label-price">Harga Beli per Gram (Rp)</label>
+      <input class="form-input" type="text" id="purchase-price" placeholder="cth: 1.850.000" oninput="formatRupiahInput(this)">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Catatan (opsional)</label>
+      <input class="form-input" type="text" id="purchase-note" placeholder="cth: Pembelian rutin">
+    </div>
+    <div style="display:flex;gap:10px;margin-top:4px">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModal('modal-purchase')">Batal</button>
+      <button class="btn btn-primary" style="flex:1" onclick="savePurchase()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Change PIN Modal -->
+<div class="modal-overlay" id="modal-pin">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Ubah PIN</div>
+    <div class="form-group">
+      <label class="form-label">PIN Lama</label>
+      <input class="form-input" type="password" id="old-pin" placeholder="••••••" maxlength="6" inputmode="numeric">
+    </div>
+    <div class="form-group">
+      <label class="form-label">PIN Baru</label>
+      <input class="form-input" type="password" id="new-pin" placeholder="••••••" maxlength="6" inputmode="numeric">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Konfirmasi PIN Baru</label>
+      <input class="form-input" type="password" id="confirm-pin" placeholder="••••••" maxlength="6" inputmode="numeric">
+    </div>
+    <div style="display:flex;gap:10px;margin-top:4px">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModal('modal-pin')">Batal</button>
+      <button class="btn btn-primary" style="flex:1" onclick="doChangePIN()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Dialog -->
+<div class="confirm-overlay" id="confirm-dialog">
+  <div class="confirm-box">
+    <div class="confirm-title" id="confirm-title">Hapus Data?</div>
+    <div class="confirm-msg" id="confirm-msg">Tindakan ini tidak dapat dibatalkan.</div>
+    <div class="confirm-actions">
+      <button class="btn btn-outline" onclick="closeConfirm()">Batal</button>
+      <button class="btn btn-danger" id="confirm-ok-btn" onclick="confirmAction()">Hapus</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reset All Data Confirm -->
+<div class="confirm-overlay" id="reset-dialog">
+  <div class="confirm-box">
+    <div class="confirm-title" style="color:var(--red)">Reset Semua Data?</div>
+    <div class="confirm-msg">Seluruh aset BSI & Treasury, riwayat pembelian, riwayat harga, dan modal akan terhapus permanen. Aksi ini <strong>tidak dapat dibatalkan</strong>.<br><br>Ketik <strong>HAPUS</strong> untuk konfirmasi:</div>
+    <input class="form-input" type="text" id="reset-confirm-input" placeholder="Ketik HAPUS" style="margin-bottom:16px" oninput="document.getElementById('reset-ok-btn').disabled = this.value.trim().toUpperCase() !== 'HAPUS'">
+    <div class="confirm-actions">
+      <button class="btn btn-outline" onclick="closeResetDialog()">Batal</button>
+      <button class="btn btn-danger" id="reset-ok-btn" onclick="doResetAllData()" disabled style="opacity:0.5">Reset Data</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ============================================================
+// STATE & STORAGE
+// ============================================================
+const DEFAULT_DATA = {
+  pin: '123456',
+  theme: 'light',
+  bsi: { modal: 5000000, purchases: [], hidden: false },
+  treasury: { modal: 5000000, purchases: [], hidden: false },
+  prices: []
+};
+
+let DATA = {};
+let currentPage = 'dashboard';
+let currentAssetTab = 'bsi';
+let confirmCallback = null;
+let idleTimer = null;
+const IDLE_TIMEOUT = 5 * 60 * 1000;
+
+function loadData() {
+  try {
+    const saved = localStorage.getItem('ams_data');
+    DATA = saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(DEFAULT_DATA));
+    if (!DATA.bsi) DATA.bsi = { modal: 5000000, purchases: [], hidden: false };
+    if (!DATA.treasury) DATA.treasury = { modal: 5000000, purchases: [], hidden: false };
+    if (!DATA.prices) DATA.prices = [];
+    if (!DATA.pin) DATA.pin = '1234';
+  } catch(e) { DATA = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
+}
+
+function saveData() {
+  localStorage.setItem('ams_data', JSON.stringify(DATA));
+}
+
+// ============================================================
+// PIN
+// ============================================================
+let pinBuffer = '';
+let pinMode = 'enter'; // enter | setup
+
+function pinKey(k) {
+  if (pinBuffer.length >= 6) return;
+  pinBuffer += k;
+  updatePinDots();
+  if (pinBuffer.length === 6) {
+    setTimeout(() => {
+      if (pinMode === 'enter') {
+        if (pinBuffer === DATA.pin) {
+          unlockApp();
+        } else {
+          document.getElementById('pin-error').textContent = 'PIN salah, coba lagi';
+          pinBuffer = '';
+          updatePinDots();
+          setTimeout(() => document.getElementById('pin-error').textContent = '', 2000);
+        }
+      }
+    }, 150);
+  }
+}
+
+function pinDel() {
+  if (pinBuffer.length > 0) {
+    pinBuffer = pinBuffer.slice(0, -1);
+    updatePinDots();
+    document.getElementById('pin-error').textContent = '';
+  }
+}
+
+function updatePinDots() {
+  for (let i = 0; i < 6; i++) {
+    document.getElementById('d' + i).classList.toggle('filled', i < pinBuffer.length);
+  }
+}
+
+function unlockApp() {
+  document.getElementById('pin-screen').style.display = 'none';
+  document.getElementById('app').classList.add('visible');
+  pinBuffer = '';
+  updatePinDots();
+  resetIdleTimer();
+  loadSettings();
+  renderDashboard();
+  renderPriceHistory();
+  renderAsetContent();
+  updateTicker();
+}
+
+function logout() {
+  document.getElementById('pin-screen').style.display = 'flex';
+  document.getElementById('app').classList.remove('visible');
+  pinBuffer = '';
+  updatePinDots();
+  document.getElementById('pin-error').textContent = '';
+  clearTimeout(idleTimer);
+}
+
+// ============================================================
+// IDLE TIMER
+// ============================================================
+function resetIdleTimer() {
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(logout, IDLE_TIMEOUT);
+}
+
+document.addEventListener('touchstart', resetIdleTimer);
+document.addEventListener('click', resetIdleTimer);
+
+// ============================================================
+// THEME
+// ============================================================
+function toggleTheme() {
+  DATA.theme = DATA.theme === 'light' ? 'dark' : 'light';
+  applyTheme();
+  saveData();
+}
+
+function applyTheme() {
+  document.documentElement.setAttribute('data-theme', DATA.theme);
+  const icon = document.getElementById('theme-icon');
+  if (DATA.theme === 'dark') {
+    icon.innerHTML = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+  } else {
+    icon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+  }
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+function navigate(page, fromAsset) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.bnav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + (page === 'settings' ? 'settings' : page)).classList.add('active');
+  document.getElementById('bn-' + (page === 'settings' ? 'settings' : page)).classList.add('active');
+  currentPage = page;
+  if (page === 'settings') loadSettings();
+  if (page === 'aset') renderAsetContent();
+}
+
+// ============================================================
+// FORMAT
+// ============================================================
+function formatRp(n) {
+  if (!n && n !== 0) return '-';
+  return 'Rp ' + Math.round(n).toLocaleString('id-ID');
+}
+
+function formatRpShort(n) {
+  if (n >= 1e9) return 'Rp ' + (n/1e9).toFixed(2) + 'M';
+  if (n >= 1e6) return 'Rp ' + (n/1e6).toFixed(2) + ' jt';
+  return formatRp(n);
+}
+
+function formatGram(n, decimals) {
+  if (!n && n !== 0) return '-';
+  decimals = decimals === undefined ? 4 : decimals;
+  let str = n.toFixed(decimals);
+  // trim trailing zeros but keep at least the integer part
+  str = str.replace(/0+$/, '').replace(/\.$/, '');
+  if (str === '' || str === '-0') str = '0';
+  return str.replace('.', ',');
+}
+
+function parseGramInput(s) {
+  // accepts comma as decimal separator (Indonesian format)
+  if (!s) return 0;
+  const normalized = String(s).replace(/\./g, '').replace(',', '.');
+  return parseFloat(normalized) || 0;
+}
+
+function parseRp(s) {
+  return parseFloat(String(s).replace(/[^0-9]/g, '')) || 0;
+}
+
+function formatRupiahInput(el) {
+  let raw = el.value.replace(/[^0-9]/g, '');
+  if (!raw) { el.value = ''; return; }
+  el.value = parseInt(raw).toLocaleString('id-ID');
+}
+
+function formatDate(d) {
+  if (!d) return '-';
+  const dt = new Date(d);
+  return dt.toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' });
+}
+
+function todayStr() {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+// ============================================================
+// TICKER
+// ============================================================
+function updateTicker() {
+  const today = getTodayPrice();
+  const bsiP = today.bsi || 0;
+  const treasuryP = today.treasury || 0;
+  const bsiGram = totalGram('bsi');
+  const treasuryGram = totalGram('treasury');
+  const bsiVal = bsiP * bsiGram;
+  const treasuryVal = treasuryP * treasuryGram;
+  const totalVal = bsiVal + treasuryVal;
+  const totalModal = DATA.bsi.modal + DATA.treasury.modal;
+  const pnl = totalVal - totalModal;
+  const pnlPct = totalModal > 0 ? ((pnl / totalModal) * 100).toFixed(2) : 0;
+  const pnlSign = pnl >= 0 ? '+' : '';
+  const now = new Date().toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit' });
+  const dateStr = new Date().toLocaleDateString('id-ID', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
+
+  const items = [
+    `<span class="tick-label">BSI</span><span class="tick-val">${bsiP ? formatRp(bsiP)+'/gr' : 'Belum diisi'}</span>`,
+    `<span class="tick-dot">•</span>`,
+    `<span class="tick-label">Treasury</span><span class="tick-val">${treasuryP ? formatRp(treasuryP)+'/gr' : 'Belum diisi'}</span>`,
+    `<span class="tick-dot">•</span>`,
+    `<span class="tick-label">Total Aset</span><span class="tick-val">${totalVal > 0 ? formatRpShort(totalVal) : '-'}</span>`,
+    `<span class="tick-dot">•</span>`,
+    `<span class="tick-label">Return</span><span class="tick-val" style="color:${pnl >= 0 ? '#a0e6bb' : '#ffcdd2'}">${totalVal > 0 ? pnlSign+pnlPct+'%' : '-'}</span>`,
+    `<span class="tick-dot">•</span>`,
+    `<span class="tick-label">Update</span><span class="tick-val">${dateStr} ${now}</span>`,
+    `<span class="tick-dot">•</span>`,
+  ];
+
+  const html = items.map(i => `<span class="tick-item">${i}</span>`).join('');
+  const track = document.getElementById('ticker-track');
+  track.innerHTML = html + html; // duplicate for seamless loop
+}
+
+// ============================================================
+// PRICES
+// ============================================================
+function getTodayPrice() {
+  const t = todayStr();
+  const exact = DATA.prices.find(p => p.date === t);
+  if (exact) return exact;
+  // fallback: use the most recent available price entry
+  if (DATA.prices.length > 0) return DATA.prices[0];
+  return {};
+}
+
+function savePrice() {
+  const bsiRaw = parseRp(document.getElementById('input-bsi-price').value);
+  const tRaw = parseRp(document.getElementById('input-treasury-price').value);
+  if (!bsiRaw && !tRaw) { showToast('Isi minimal satu harga'); return; }
+  const t = todayStr();
+  const existing = DATA.prices.findIndex(p => p.date === t);
+  const entry = { date: t, bsi: bsiRaw || (existing >= 0 ? DATA.prices[existing].bsi : 0), treasury: tRaw || (existing >= 0 ? DATA.prices[existing].treasury : 0) };
+  if (existing >= 0) DATA.prices[existing] = entry;
+  else DATA.prices.unshift(entry);
+  DATA.prices.sort((a,b) => b.date.localeCompare(a.date));
+  saveData();
+  renderPriceHistory();
+  updateTicker();
+  renderDashboard();
+  document.getElementById('input-bsi-price').value = '';
+  document.getElementById('input-treasury-price').value = '';
+  showToast('Harga disimpan');
+}
+
+function renderPriceHistory() {
+  const el = document.getElementById('price-history-table');
+  if (!DATA.prices.length) {
+    el.innerHTML = '<div class="empty-state"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg><br>Belum ada data harga</div>';
+    return;
+  }
+  // prefill today's prices
+  const today = getTodayPrice();
+  if (today.bsi) document.getElementById('input-bsi-price').value = today.bsi.toLocaleString('id-ID');
+  if (today.treasury) document.getElementById('input-treasury-price').value = today.treasury.toLocaleString('id-ID');
+
+  let rows = DATA.prices.slice(0, 30).map(p => `
+    <tr>
+      <td>${formatDate(p.date)}</td>
+      <td>${p.bsi ? formatRp(p.bsi) : '-'}</td>
+      <td>${p.treasury ? formatRp(p.treasury) : '-'}</td>
+    </tr>
+  `).join('');
+  el.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Tanggal</th><th>BSI</th><th>Treasury</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+// ============================================================
+// PURCHASES
+// ============================================================
+function totalGram(platform) {
+  return DATA[platform].purchases.reduce((s, p) => s + (parseFloat(p.gram) || 0), 0);
+}
+
+function avgBuyPrice(platform) {
+  const priced = DATA[platform].purchases.filter(p => (parseFloat(p.price) || 0) > 0);
+  const gPriced = priced.reduce((s, p) => s + (parseFloat(p.gram) || 0), 0);
+  if (!gPriced) return 0;
+  const totalCost = priced.reduce((s, p) => s + ((parseFloat(p.gram) || 0) * (parseFloat(p.price) || 0)), 0);
+  return totalCost / gPriced;
+}
+
+let purchaseMode = 'new';
+
+function setPurchaseMode(mode) {
+  purchaseMode = mode;
+  document.getElementById('mode-tab-new').classList.toggle('active', mode === 'new');
+  document.getElementById('mode-tab-saldo').classList.toggle('active', mode === 'saldo');
+  document.getElementById('saldo-info').style.display = mode === 'saldo' ? 'block' : 'none';
+  const priceLabel = document.getElementById('label-price');
+  const dateLabel = document.getElementById('label-date');
+  if (mode === 'saldo') {
+    dateLabel.textContent = 'Tanggal Pencatatan';
+    priceLabel.textContent = 'Harga Beli Rata² per Gram (opsional, Rp)';
+  } else {
+    dateLabel.textContent = 'Tanggal Pembelian';
+    priceLabel.textContent = 'Harga Beli per Gram (Rp)';
+  }
+}
+
+function openAddPurchase(platform) {
+  document.getElementById('modal-purchase-title').textContent = 'Tambah Pembelian ' + (platform === 'bsi' ? 'BSI' : 'Treasury');
+  document.getElementById('purchase-date').value = todayStr();
+  document.getElementById('purchase-gram').value = '';
+  document.getElementById('purchase-price').value = '';
+  document.getElementById('purchase-note').value = '';
+  document.getElementById('modal-purchase').dataset.platform = platform;
+  setPurchaseMode('new');
+  document.getElementById('modal-purchase').classList.add('open');
+}
+
+function savePurchase() {
+  const platform = document.getElementById('modal-purchase').dataset.platform;
+  const date = document.getElementById('purchase-date').value;
+  const gram = parseGramInput(document.getElementById('purchase-gram').value);
+  const price = parseRp(document.getElementById('purchase-price').value);
+  let note = document.getElementById('purchase-note').value.trim();
+  if (purchaseMode === 'saldo') {
+    if (!date || !gram) { showToast('Tanggal dan jumlah gram wajib diisi'); return; }
+    note = (note ? note + ' · ' : '') + 'Saldo Awal';
+    DATA[platform].purchases.unshift({ id: Date.now(), date, gram, price: price || 0, note, isSaldoAwal: true });
+  } else {
+    if (!date || !gram || !price) { showToast('Lengkapi semua field'); return; }
+    DATA[platform].purchases.unshift({ id: Date.now(), date, gram, price, note });
+  }
+  DATA[platform].purchases.sort((a,b) => b.date.localeCompare(a.date));
+  saveData();
+  closeModal('modal-purchase');
+  renderAsetContent();
+  renderDashboard();
+  updateTicker();
+  showToast(purchaseMode === 'saldo' ? 'Saldo awal ditambahkan' : 'Pembelian ditambahkan');
+}
+
+function deletePurchase(platform, id) {
+  showConfirm('Hapus Pembelian?', 'Data pembelian ini akan dihapus permanen.', () => {
+    DATA[platform].purchases = DATA[platform].purchases.filter(p => p.id !== id);
+    saveData();
+    renderAsetContent();
+    renderDashboard();
+    updateTicker();
+    showToast('Pembelian dihapus');
+  });
+}
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+function refreshDashboard() {
+  const skel = document.getElementById('dash-skeleton');
+  const content = document.getElementById('dash-content');
+  skel.style.display = 'block';
+  content.style.display = 'none';
+  setTimeout(() => {
+    renderDashboard();
+    updateTicker();
+  }, 600);
+}
+
+function renderDashboard() {
+  const skel = document.getElementById('dash-skeleton');
+  const content = document.getElementById('dash-content');
+  const today = getTodayPrice();
+  const bsiP = today.bsi || 0;
+  const treasuryP = today.treasury || 0;
+  const bsiGram = totalGram('bsi');
+  const treasuryGram = totalGram('treasury');
+  const bsiVal = bsiP * bsiGram;
+  const treasuryVal = treasuryP * treasuryGram;
+  const bsiPnl = bsiVal - DATA.bsi.modal;
+  const treasuryPnl = treasuryVal - DATA.treasury.modal;
+  const totalModal = DATA.bsi.modal + DATA.treasury.modal;
+  const totalVal = bsiVal + treasuryVal;
+  const totalPnl = totalVal - totalModal;
+  const totalPct = totalModal > 0 ? ((totalPnl / totalModal) * 100).toFixed(2) : 0;
+  const bestPlatform = bsiP > treasuryP ? 'bsi' : (treasuryP > bsiP ? 'treasury' : null);
+
+  // Date
+  document.getElementById('dash-date').textContent = new Date().toLocaleDateString('id-ID', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+
+  // BSI Card
+  const bsiPct = DATA.bsi.modal > 0 ? ((bsiPnl / DATA.bsi.modal) * 100).toFixed(2) : 0;
+  document.getElementById('bsi-dash-card').innerHTML = `
+    <div class="platform-card platform-card-bsi ${DATA.bsi.hidden ? 'hidden-asset' : ''}">
+      ${bestPlatform === 'bsi' ? '<div class="pc-best-badge">⭐ Harga Terbaik</div>' : ''}
+      <div class="pc-name">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>
+        BSI
+      </div>
+      <div class="pc-value">${bsiVal > 0 ? formatRp(bsiVal) : (bsiGram > 0 ? 'Harga belum diisi' : 'Belum ada aset')}</div>
+      <div class="pc-gram">${formatGram(bsiGram)} gram · Modal ${formatRpShort(DATA.bsi.modal)}</div>
+      <div class="pc-pnl">
+        <div>
+          <div class="pc-pnl-label">Untung / Rugi</div>
+          <div class="pc-pnl-val">${bsiVal > 0 ? (bsiPnl >= 0 ? '+' : '') + formatRp(bsiPnl) + ' (' + (bsiPnl >= 0 ? '+' : '') + bsiPct + '%)' : '-'}</div>
+        </div>
+        <div class="pc-toggle" onclick="toggleAsset('bsi')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            ${DATA.bsi.hidden ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>' : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>'}
+          </svg>
+        </div>
+      </div>
+    </div>`;
+
+  // Treasury Card
+  const tPct = DATA.treasury.modal > 0 ? ((treasuryPnl / DATA.treasury.modal) * 100).toFixed(2) : 0;
+  document.getElementById('treasury-dash-card').innerHTML = `
+    <div class="platform-card platform-card-treasury ${DATA.treasury.hidden ? 'hidden-asset' : ''}">
+      ${bestPlatform === 'treasury' ? '<div class="pc-best-badge" style="color:#333">⭐ Harga Terbaik</div>' : ''}
+      <div class="pc-name" style="color:rgba(0,0,0,0.8)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,0.7)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="22" x2="21" y2="22"/><rect x="5" y="11" width="4" height="11"/><rect x="10" y="7" width="4" height="15"/><rect x="15" y="4" width="4" height="18"/></svg>
+        Treasury
+      </div>
+      <div class="pc-value" style="color:#1a0a00">${treasuryVal > 0 ? formatRp(treasuryVal) : (treasuryGram > 0 ? 'Harga belum diisi' : 'Belum ada aset')}</div>
+      <div class="pc-gram" style="color:rgba(0,0,0,0.55)">${formatGram(treasuryGram)} gram · Modal ${formatRpShort(DATA.treasury.modal)}</div>
+      <div class="pc-pnl" style="border-color:rgba(0,0,0,0.15)">
+        <div>
+          <div class="pc-pnl-label" style="color:rgba(0,0,0,0.55)">Untung / Rugi</div>
+          <div class="pc-pnl-val" style="color:#1a0a00">${treasuryVal > 0 ? (treasuryPnl >= 0 ? '+' : '') + formatRp(treasuryPnl) + ' (' + (treasuryPnl >= 0 ? '+' : '') + tPct + '%)' : '-'}</div>
+        </div>
+        <div class="pc-toggle" style="background:rgba(0,0,0,0.15)" onclick="toggleAsset('treasury')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,0.7)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            ${DATA.treasury.hidden ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>' : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>'}
+          </svg>
+        </div>
+      </div>
+    </div>`;
+
+  // Total
+  const pnlSign = totalPnl >= 0 ? '+' : '';
+  document.getElementById('total-summary').innerHTML = `
+    <div class="total-row"><span class="tr-label">Total Nilai Aset</span><span class="tr-val" style="font-size:15px;color:var(--green-1)">${totalVal > 0 ? formatRp(totalVal) : '-'}</span></div>
+    <div class="total-row"><span class="tr-label">Total Modal</span><span class="tr-val">${formatRp(totalModal)}</span></div>
+    <div class="total-row"><span class="tr-label">Total Gram</span><span class="tr-val">${formatGram(bsiGram + treasuryGram)} gram</span></div>
+    <div class="total-row"><span class="tr-label">Untung / Rugi</span><span class="tr-val ${totalPnl >= 0 ? 'text-green' : 'text-red'}">${totalVal > 0 ? pnlSign + formatRp(totalPnl) + ' (' + pnlSign + totalPct + '%)' : '-'}</span></div>
+  `;
+
+  skel.style.display = 'none';
+  content.style.display = 'block';
+}
+
+function toggleAsset(platform) {
+  DATA[platform].hidden = !DATA[platform].hidden;
+  saveData();
+  renderDashboard();
+  // Navigate to aset page
+  navigate('aset');
+  currentAssetTab = platform;
+  switchAssetTab(platform);
+}
+
+// ============================================================
+// ASET PAGE
+// ============================================================
+function switchAssetTab(tab) {
+  currentAssetTab = tab;
+  document.getElementById('tab-bsi').classList.toggle('active', tab === 'bsi');
+  document.getElementById('tab-treasury').classList.toggle('active', tab === 'treasury');
+  renderAsetContent();
+}
+
+function renderAsetContent() {
+  const platform = currentAssetTab;
+  const today = getTodayPrice();
+  const price = today[platform] || 0;
+  const gram = totalGram(platform);
+  const val = price * gram;
+  const modal = DATA[platform].modal;
+  const pnl = val - modal;
+  const pct = modal > 0 ? ((pnl / modal) * 100).toFixed(2) : 0;
+  const avg = avgBuyPrice(platform);
+  const purchases = DATA[platform].purchases;
+  const label = platform === 'bsi' ? 'BSI' : 'Treasury';
+
+  let purchaseRows = '';
+  if (purchases.length === 0) {
+    purchaseRows = `<div class="empty-state">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+      <br>Belum ada riwayat pembelian
+    </div>`;
+  } else {
+    purchaseRows = purchases.map(p => `
+      <div class="history-item">
+        <div class="hi-icon" style="${p.isSaldoAwal ? 'background:var(--gold-3)' : ''}">
+          ${p.isSaldoAwal
+            ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c8960a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>'
+            : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green-1)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>'}
+        </div>
+        <div class="hi-body">
+          <div class="hi-title">${formatGram(p.gram)} gram ${p.isSaldoAwal ? '<span class="badge badge-gold" style="margin-left:4px">Saldo Awal</span>' : ''}</div>
+          <div class="hi-sub">${formatDate(p.date)}${p.note ? ' · ' + p.note.replace(' · Saldo Awal','').replace('Saldo Awal','') : ''}</div>
+        </div>
+        <div class="hi-right">
+          <div class="hi-val">${p.price ? formatRp(p.price)+'/gr' : '-'}</div>
+          <div class="hi-gram">${p.price ? formatRpShort(p.gram * p.price) : ''}</div>
+        </div>
+        <button class="btn btn-danger btn-sm btn-icon" style="margin-left:4px" onclick="deletePurchase('${platform}', ${p.id})">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        </button>
+      </div>
+    `).join('');
+  }
+
+  document.getElementById('aset-content').innerHTML = `
+    <div class="stat-row">
+      <div class="stat-item">
+        <div class="s-label">Total Gram</div>
+        <div class="s-val">${formatGram(gram)} gr</div>
+      </div>
+      <div class="stat-item">
+        <div class="s-label">Harga Hari Ini</div>
+        <div class="s-val">${price ? formatRpShort(price)+'/gr' : '-'}</div>
+      </div>
+      <div class="stat-item">
+        <div class="s-label">Nilai Sekarang</div>
+        <div class="s-val ${val > 0 ? 'text-green' : ''}">${val > 0 ? formatRpShort(val) : '-'}</div>
+      </div>
+      <div class="stat-item">
+        <div class="s-label">Harga Beli Rata²</div>
+        <div class="s-val">${avg > 0 ? formatRpShort(avg)+'/gr' : '-'}</div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:12px">
+      <div class="flex-between">
+        <div>
+          <div style="font-size:11px;color:var(--text-3)">Modal ${label}</div>
+          <div style="font-size:16px;font-weight:700;color:var(--text-1);margin-top:2px">${formatRp(modal)}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:11px;color:var(--text-3)">Untung / Rugi</div>
+          <div style="font-size:15px;font-weight:700;margin-top:2px" class="${pnl >= 0 ? 'text-green' : 'text-red'}">${val > 0 ? (pnl >= 0 ? '+' : '') + formatRp(pnl) : '-'}</div>
+          <div style="font-size:11px" class="${pnl >= 0 ? 'text-green' : 'text-red'}">${val > 0 ? (pnl >= 0 ? '+' : '') + pct + '%' : ''}</div>
+        </div>
+      </div>
+    </div>
+    <div class="section-header">
+      <div class="section-title">Riwayat Pembelian</div>
+      <button class="btn btn-primary btn-sm" onclick="openAddPurchase('${platform}')">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Tambah
+      </button>
+    </div>
+    ${purchaseRows}
+  `;
+}
+
+// ============================================================
+// SETTINGS
+// ============================================================
+function loadSettings() {
+  document.getElementById('modal-bsi-input').value = DATA.bsi.modal.toLocaleString('id-ID');
+  document.getElementById('modal-treasury-input').value = DATA.treasury.modal.toLocaleString('id-ID');
+}
+
+function saveModals() {
+  const bsiModal = parseRp(document.getElementById('modal-bsi-input').value);
+  const tModal = parseRp(document.getElementById('modal-treasury-input').value);
+  if (!bsiModal || !tModal) { showToast('Modal tidak boleh kosong'); return; }
+  DATA.bsi.modal = bsiModal;
+  DATA.treasury.modal = tModal;
+  saveData();
+  renderDashboard();
+  updateTicker();
+  showToast('Modal disimpan');
+}
+
+function openChangePIN() {
+  document.getElementById('old-pin').value = '';
+  document.getElementById('new-pin').value = '';
+  document.getElementById('confirm-pin').value = '';
+  document.getElementById('modal-pin').classList.add('open');
+}
+
+function doChangePIN() {
+  const oldP = document.getElementById('old-pin').value;
+  const newP = document.getElementById('new-pin').value;
+  const confP = document.getElementById('confirm-pin').value;
+  if (oldP !== DATA.pin) { showToast('PIN lama salah'); return; }
+  if (newP.length !== 6 || !/^\d{6}$/.test(newP)) { showToast('PIN baru harus 6 angka'); return; }
+  if (newP !== confP) { showToast('Konfirmasi PIN tidak cocok'); return; }
+  DATA.pin = newP;
+  saveData();
+  closeModal('modal-pin');
+  showToast('PIN berhasil diubah');
+}
+
+// ============================================================
+// EXPORT / IMPORT
+// ============================================================
+function exportData() {
+  const json = JSON.stringify(DATA, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'ams-backup-' + todayStr() + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Data diekspor');
+}
+
+function importData(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const imported = JSON.parse(ev.target.result);
+      showConfirm('Import Data?', 'Semua data saat ini akan diganti dengan data dari file backup.', () => {
+        DATA = imported;
+        saveData();
+        applyTheme();
+        renderDashboard();
+        renderPriceHistory();
+        renderAsetContent();
+        loadSettings();
+        updateTicker();
+        showToast('Data berhasil diimport');
+      });
+    } catch(err) { showToast('File tidak valid'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+// ============================================================
+// RESET ALL DATA
+// ============================================================
+function resetAllData() {
+  document.getElementById('reset-confirm-input').value = '';
+  document.getElementById('reset-ok-btn').disabled = true;
+  document.getElementById('reset-ok-btn').style.opacity = '0.5';
+  document.getElementById('reset-dialog').classList.add('open');
+}
+
+function closeResetDialog() {
+  document.getElementById('reset-dialog').classList.remove('open');
+  document.getElementById('reset-confirm-input').value = '';
+}
+
+function doResetAllData() {
+  const val = document.getElementById('reset-confirm-input').value.trim().toUpperCase();
+  if (val !== 'HAPUS') return;
+  DATA = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  saveData();
+  applyTheme();
+  closeResetDialog();
+  renderDashboard();
+  renderPriceHistory();
+  renderAsetContent();
+  loadSettings();
+  updateTicker();
+  navigate('dashboard');
+  showToast('Semua data telah direset');
+}
+
+// ============================================================
+// UI HELPERS
+// ============================================================
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+function showConfirm(title, msg, cb) {
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-msg').textContent = msg;
+  confirmCallback = cb;
+  document.getElementById('confirm-dialog').classList.add('open');
+}
+
+function closeConfirm() {
+  document.getElementById('confirm-dialog').classList.remove('open');
+  confirmCallback = null;
+}
+
+function confirmAction() {
+  if (confirmCallback) confirmCallback();
+  closeConfirm();
+}
+
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', (e) => { if (e.target === el) el.classList.remove('open'); });
+});
+
+// ============================================================
+// INIT
+// ============================================================
+loadData();
+applyTheme();
+</script>
+</body>
+</html>
